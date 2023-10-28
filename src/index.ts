@@ -340,7 +340,7 @@ export function apply(ctx: Context, config: Config) {
     })
 
   // 通过链接获得推文内容
-  ctx.command('推文列表 <link>', '获取推文内容')
+  ctx.command('获取推文 <link>', '获取推文内容').alias('twitter', '推文', 'twitter内容', 't')
     .action(async ({ session }, link) => {
       console.log(`正在处理链接: ${link}`);
       const parsedTwitterLink = await parseTwitterLink(link);
