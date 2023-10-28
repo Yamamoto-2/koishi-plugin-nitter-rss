@@ -37,7 +37,8 @@
     },
     "service": {
       "required": [
-        "database"
+        "database",
+        "puppeteer"
       ]
     },
     "locales": [
