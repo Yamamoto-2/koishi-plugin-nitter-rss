@@ -2,27 +2,46 @@
   "name": "koishi-plugin-nitter-rss",
   "description": "订阅 X (Twitter) 内容，使用 https://nitter.cz/，支持ChatGPT与Gradio Chatbot翻译",
   "version": "0.0.1",
+  "contributors": [
+    "Yamamoto <1810972564qq@gmail.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yamamoto-2/koishi-plugin-nitter-rss.git"
+  },
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
     "lib",
-    "dist"
+    "dist",
+    "config",
+    "assets"
   ],
   "license": "MIT",
   "scripts": {},
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "twitter",
+    "nitter",
+    "rss"
   ],
   "peerDependencies": {
     "koishi": "^4.11.9"
   },
-  "dependencies": {
-    "cheerio": "^1.0.0-rc.12",
-    "gradio-chatbot": "^0.0.26",
-    "moment": "^2.29.4",
-    "openai": "^4.12.4",
-    "xml2js": "^0.6.2"
+  "koishi": {
+    "description": {
+      "en": " X (Twitter) 内容，使用 https://nitter.cz/，支持ChatGPT与Gradio Chatbot翻译",
+      "zh": "Subscribe to X (Twitter) content using https://nitter.cz/ with ChatGPT & Gradio Chatbot translation support!"
+    },
+    "service": {
+      "required": [
+        "database"
+      ]
+    },
+    "locales": [
+      "zh"
+    ]
   }
 }
