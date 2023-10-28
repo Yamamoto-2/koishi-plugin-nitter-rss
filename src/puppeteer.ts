@@ -38,7 +38,7 @@ export async function capturehtml(account: string, id: string, getScreenshot: bo
         const url = `https://nitter.cz/${account}/status/${id}`;//网页地址
 
         const browser = await puppeteer.launch({
-            executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
+            //executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
         });
         const page = await browser.newPage();
         if (width) {
