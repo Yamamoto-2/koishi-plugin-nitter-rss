@@ -1,4 +1,4 @@
-import { h } from 'koishi';
+import { h ,Context} from 'koishi';
 import { capturehtml, LinkDetail } from './puppeteer';
 import { LinkInfo } from './utils';
 import { GradioChatBotParse } from './translate/GradioChatBot'
@@ -16,13 +16,13 @@ interface Config {
     ChatGPTBaseUrl: string
 }
 
-export async function parseLinkInfo(parsedTwitterLink: LinkInfo, config: Config, translate: boolean): Promise<Array<string | h>> {
+export async function parseLinkInfo(ctx:Context,parsedTwitterLink: LinkInfo, config: Config, translate: boolean): Promise<Array<string | h>> {
     let finalText = '';
     let content: LinkDetail;
 
     // 获取推文内容
     try {
-        content = await capturehtml(parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
+        content = await capturehtml(ctx,parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
         finalText += content.fullname + '\n' + content.timeText;
     } catch (e) {
         return ([`获取推文内容失败`]);

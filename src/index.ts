@@ -166,7 +166,7 @@ export function apply(ctx: Context, config: Config) {
       let tempResult: Array<string | h> = [];
       const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
       try {
-        tempResult = await parseLinkInfo(parsedTwitterLink, config, tweet.translate);
+        tempResult = await parseLinkInfo(ctx,parsedTwitterLink, config, tweet.translate);
       }
       catch (e) {
         console.log(e);
@@ -180,7 +180,7 @@ export function apply(ctx: Context, config: Config) {
             const account = channel.twitterAccounts[k];
             if (account.account == tempAccount) {
               console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
-              ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, await parseLinkInfo(parsedTwitterLink, config, true));
+              ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, await parseLinkInfo(ctx,parsedTwitterLink, config, true));
               //延时10秒
               await new Promise((resolve) => {
                 console.log(`正在等待10秒`)
@@ -349,7 +349,7 @@ export function apply(ctx: Context, config: Config) {
         return;
       }
       session.send(`正在处理`);
-      return (await parseLinkInfo(parsedTwitterLink, config, true));
+      return (await parseLinkInfo(ctx,parsedTwitterLink, config, config.translateType != '不翻译'));
     });
 }
 

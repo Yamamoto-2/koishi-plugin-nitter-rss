@@ -1,4 +1,5 @@
-import * as puppeteer from 'koishi-plugin-puppeteer'
+import { Context } from 'koishi'
+import { } from 'koishi-plugin-puppeteer'
 import * as fs from 'fs'
 import * as cheerio from 'cheerio'
 import { createDirIfNonExist, download } from './downloader'
@@ -13,7 +14,7 @@ export interface LinkDetail {
     images: Buffer[];
 }
 
-export async function capturehtml(account: string, id: string, getScreenshot: boolean, sendImage: boolean, width: number): Promise<LinkDetail> {
+export async function capturehtml(ctx: Context, account: string, id: string, getScreenshot: boolean, sendImage: boolean, width: number): Promise<LinkDetail> {
     //创建目录
     createDirIfNonExist(`./data/cache/nitter-rss/${account}/status/`);
     //如果文件已经存在，使用缓存
@@ -37,10 +38,7 @@ export async function capturehtml(account: string, id: string, getScreenshot: bo
     else {//如果文件不存在，获取网页
         const url = `https://nitter.cz/${account}/status/${id}`;//网页地址
 
-        const browser = await puppeteer.launch({
-            //executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
-        });
-        const page = await browser.newPage();
+        const page = await ctx.puppeteer.page();
         if (width) {
             await page.setViewport({ width, height: 4000 });
         }
@@ -134,8 +132,6 @@ export async function capturehtml(account: string, id: string, getScreenshot: bo
         if (sendImage) {
             images = await getImageFromHtml($, account, id);
         }
-        // 关闭浏览器
-        await browser.close();
         return { extractedContent: cleanText(extractedContent), fullname, timestamp, timeText, screenshot: screenshotData, images };
     }
 }
@@ -159,7 +155,7 @@ async function getImageFromHtml($: cheerio.CheerioAPI, account: string, id: stri
     });
     let imageId = 0;
     for (const imageUrl of imageUrls) {
-        if(fs.existsSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`)){
+        if (fs.existsSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`)) {
             continue;
         }
         // 下载图片并保存到文件
