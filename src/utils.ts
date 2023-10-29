@@ -15,10 +15,10 @@ export function removeHTMLTags(inputText: string): string {
 //时间文本转时间戳
 export function parseTimestamp(timestampText: string): number | null {
   // 尝试解析 'MMM D, YYYY · h:mm A UTC' 格式的时间文本
-  const parsedTimestamp1 = moment(timestampText, 'MMM D, YYYY · h:mm A UTC', 'en');
+  const parsedTimestamp1 = moment.utc(timestampText, 'MMM D, YYYY · h:mm A UTC', 'en');
   
   // 尝试解析 'ddd, DD MMM YYYY HH:mm:ss GMT' 格式的时间文本
-  const parsedTimestamp2 = moment(timestampText, 'ddd, DD MMM YYYY HH:mm:ss GMT', 'en');
+  const parsedTimestamp2 = moment.utc(timestampText, 'ddd, DD MMM YYYY HH:mm:ss GMT', 'en');
 
   // 如果其中一个解析成功，则返回时间戳
   if (parsedTimestamp1.isValid()) {
