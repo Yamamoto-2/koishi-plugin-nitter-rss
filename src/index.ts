@@ -1,4 +1,4 @@
-import { Context, Schema, h, Session } from 'koishi'
+import { Context, Schema, h, Session, Channel } from 'koishi'
 import { parseLinkInfo } from './parseLinkInfo'
 import { parseTwitterLink, formatLocalTime } from './utils'
 import { getTwitterList, RSSItem } from './RSS'
@@ -24,7 +24,7 @@ export const Config = Schema.intersect([
     translateType: Schema.union(['不翻译',/* '翻译API', */'gradio-chatbot', 'ChatGPT']).default('不翻译').description('翻译类型'),
     screenshot: Schema.boolean().default(true).description('是否在发送消息时发送截图'),
     sendImage: Schema.boolean().default(false).description('是否在发送消息时单独发送推文内所有图片素材'),
-    timeInterval: Schema.number().role('slider').min(5).max(100).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
+    timeInterval: Schema.number().role('slider').min(5).max(120).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
     skipRetweet: Schema.boolean().default(true).description('是否跳过转推'),
   }).description('基础配置'),
 
@@ -92,120 +92,104 @@ export function apply(ctx: Context, config: Config) {
       'twitterAccounts': { type: 'json', initial: [] }
     }
   );
-  async function interval() {
-    const time = new Date();
-    const afterTime = time.getTime() - config.timeInterval * 60 * 1000;
-    const channels = await ctx.database.get('channel', {});
-
-    //获取所有频道中所有需要转发的账号
-    let accounts = [];
-    for (let i = 0; i < channels.length; i++) {
-      const channel = channels[i];
-      if (channel.twitterAccounts != undefined) {
-        for (let j = 0; j < channel.twitterAccounts.length; j++) {
-          const account = channel.twitterAccounts[j];
-          //判断是否重复
-          let isExist = false;
-          accounts.map((item) => {
-            if (item.account == account.account) {
-              //如果其中有需要翻译，就需要翻译
-              if (account.translate) {
-                item.translate = true;
-              }
-              isExist = true;
+  console.log(config)
+  //获取所有需要转发的账号
+  function getAllAccounts(channels: Channel[]): twitterAccount[] {
+    const accounts = [];
+    channels.forEach(channel => {
+      if (channel.twitterAccounts) {
+        channel.twitterAccounts.forEach(account => {
+          if (!accounts.some(item => item.account === account.account)) {
+            accounts.push({
+              account: account.account,
+              translate: account.translate
+            });
+          } else {
+            //如果已经存在，且translate为true，则改为true
+            const existingAccount = accounts.find(item => item.account === account.account);
+            if (account.translate) {
+              existingAccount.translate = true;
             }
-          })
-          if (isExist) {
-            continue;
           }
-          accounts.push({ account: account.account, translate: account.translate, guildId: channel.guildId, channelId: channel.id });
-        }
+        });
       }
-    }
-    //获取频道中在时间范围内的所有推文
-    let allTweets: Array<{ rss: RSSItem, translate: boolean }> = [];
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
-      try {
-        const result = await getTwitterList(account.account);
-        for (let j = 0; j < result.length; j++) {
-          const tempTweet = result[j];
-          //判断是否为转推
-          if (config.skipRetweet && (await parseTwitterLink(tempTweet.link)).account != account.account) {
-            continue;
-          }
-          //判断时间是否在范围内
-          if (new Date(tempTweet.pubDate).getTime() < afterTime) {
-            continue;
-          }
-          //判断是否已经添加过
-          let isExist = false;
-          allTweets.map((item) => {
-            if (item.rss.link == tempTweet.link) {
-              isExist = true;
-            }
-          })
-          if (isExist) {
-            continue;
-          }
-          allTweets.push({ rss: tempTweet, translate: account.translate });
-        }
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    //时间从晚到早排序
-    allTweets.sort((a, b) => {
-      return b.rss.pubDate - a.rss.pubDate;
     });
-    //处理推文
-
-    for (let i = 0; i < allTweets.length; i++) {
-      const tweet = allTweets[i];
-      const tempAccount = (await parseTwitterLink(tweet.rss.link)).account;
-      let tempResult: Array<string | h> = [];
-      const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
+    return accounts;
+  }
+  //获取时间范围内的所有推文:
+  async function getRecentTweets(accounts: twitterAccount[], afterTime: number): Promise<{ rss: RSSItem; translate: boolean }[]> {
+    const allTweets: Array<{ rss: RSSItem, translate: boolean }> = [];
+    for (const account of accounts) {
       try {
-        tempResult = await parseLinkInfo(ctx,parsedTwitterLink, config, tweet.translate);
-      }
-      catch (e) {
-        console.log(e);
-        continue;
-      }
-      //发送消息
-      for (let j = 0; j < channels.length; j++) {
-        const channel = channels[j];
-        if (channel.twitterAccounts != undefined) {
-          for (let k = 0; k < channel.twitterAccounts.length; k++) {
-            const account = channel.twitterAccounts[k];
-            if (account.account == tempAccount) {
-              console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
-              ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, await parseLinkInfo(ctx,parsedTwitterLink, config, true));
-              //延时10秒
-              await new Promise((resolve) => {
-                console.log(`正在等待10秒`)
-                setTimeout(() => {
-                  resolve('');
-                }, 10000);
-              });
-            }
+        const tweets = await getTwitterList(account.account);
+        for (const tweet of tweets) {
+          const tweetTime = tweet.pubDate
+          const isRetweet = config.skipRetweet && (await parseTwitterLink(tweet.link)).account !== account.account;
+          const isExist = allTweets.some(item => item.rss.link === tweet.link);
+          if (!isExist && tweetTime >= afterTime && !isRetweet) {
+            allTweets.push({ rss: tweet, translate: account.translate });
           }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    return allTweets.sort((a, b) => new Date(b.rss.pubDate).getTime() - new Date(a.rss.pubDate).getTime());
+  }
+
+  //发送消息
+  async function sendMessages(tweets: Array<{ rss: RSSItem, translate: boolean }>, channels: Channel[], ctx: Context, config: Config) {
+    for (const tweet of tweets) {
+      const tempAccount = (await parseTwitterLink(tweet.rss.link)).account;
+      for (const channel of channels) {
+        if (channel.twitterAccounts && channel.twitterAccounts.some(account => account.account === tempAccount)) {
+          console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
+          const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
+          const messageContent = await parseLinkInfo(ctx, parsedTwitterLink, config, true);
+          messageContent.unshift(`新推文:\n`);
+          ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
+          await new Promise(resolve => {
+            console.log(`正在等待10秒`);
+            setTimeout(() => resolve(''), 10000);
+          });
         }
       }
     }
   }
 
-  console.log(config);
-  //循环处理channel
-  ctx.setInterval(interval,
-    config.timeInterval * 60 * 1000);
+  let intervaling = false;
+  //循环
+  async function interval() {
+    if (intervaling) {
+      return;
+    }
+    intervaling = true;
+    const time = new Date();
+    const afterTime = time.getTime() - config.timeInterval * 60 * 1000;
+    const channels = await ctx.database.get('channel', {});
+    const accounts = getAllAccounts(channels);
+    const recentTweets = await getRecentTweets(accounts, afterTime);
+    await sendMessages(recentTweets, channels, ctx, config);
+    intervaling = false;
+  }
+  ctx.setInterval(interval, config.timeInterval * 60 * 1000);
+  ctx.command('开始循环', 'nitter-rss: 测试用，立刻开始转发轮询').action(async ({ session }) => {
+    if (intervaling) {
+      session.send(`开始循环`);
+    }
+    else {
+      session.send(`正在循环中`);
+    }
+    await interval();
+    session.send(`循环结束`);
+  }
+  )
 
-
-  ctx.command('开始循环').action(async ({ session }) => {
-    interval();
-  })
   // 添加account到channel
-  ctx.command('订阅添加 <account>', '订阅新的推特账号').channelFields(['twitterAccounts']).alias('订阅', '订阅推特', '添加订阅')
+  ctx.command('订阅添加 <account>', '订阅新的推特账号')
+    .channelFields(['twitterAccounts'])
+    .alias('订阅', '订阅推特', '添加订阅')
+    .example('订阅添加 LinusTech  订阅LinusTech的推特')
     .action(async ({ session }, account) => {
 
       //判断是否是channel
@@ -229,12 +213,14 @@ export function apply(ctx: Context, config: Config) {
         return;
       }
       //添加
-      session.channel.twitterAccounts.push({ account: account, translate: true });
+      session.channel.twitterAccounts.push({ account: account, translate: config.translateType != '不翻译' });
       session.send(`添加成功`);
     })
 
   //查询当前channel的account
-  ctx.command('订阅查询', '查询当前channel的订阅的推特账号').channelFields(['twitterAccounts']).alias('订阅列表', '查询订阅')
+  ctx.command('订阅查询', 'nitter-rss: 查询当前channel的订阅的推特账号')
+    .channelFields(['twitterAccounts'])
+    .alias('订阅列表', '查询订阅')
     .action(async ({ session }) => {
 
       //判断是否是channel
@@ -252,7 +238,11 @@ export function apply(ctx: Context, config: Config) {
     })
 
   //删除channel的account
-  ctx.command('订阅删除 <account>', '删除当前channel的订阅的推特账号').channelFields(['twitterAccounts']).alias('删除订阅', '删除订阅推特')
+  ctx.command('订阅删除 <account>', 'nitter-rss: 删除当前channel的订阅的推特账号')
+    .channelFields(['twitterAccounts'])
+    .alias('删除订阅', '删除订阅推特', '取消订阅', '取消订阅推特')
+    .example('订阅删除 LinusTech  删除LinusTech的订阅推特')
+
     .action(async ({ session }, account) => {
 
       //判断是否是channel
@@ -273,7 +263,10 @@ export function apply(ctx: Context, config: Config) {
     })
 
   //调整channel的account的翻译状态为翻译
-  ctx.command('订阅修改翻译 <account>', '调整当前channel的订阅的推特账号的翻译状态为翻译').channelFields(['twitterAccounts']).alias('翻译订阅', '订阅翻译')
+  ctx.command('订阅修改翻译 <account>', 'nitter-rss: 调整当前channel的订阅的推特账号的翻译状态为翻译')
+    .channelFields(['twitterAccounts'])
+    .alias('翻译订阅', '订阅翻译')
+    .example('订阅修改翻译 LinusTech  调整LinusTech的订阅推特的翻译状态为翻译')
     .action(async ({ session }, account) => {
 
       //判断是否是channel
@@ -294,7 +287,10 @@ export function apply(ctx: Context, config: Config) {
     })
 
   //调整channel的account的翻译状态为不翻译
-  ctx.command('订阅修改不翻译 <account>', '调整当前channel的订阅的推特账号的翻译状态为不翻译').channelFields(['twitterAccounts']).alias('不翻译订阅', '订阅不翻译')
+  ctx.command('订阅修改不翻译 <account>', 'nitter-rss: 调整当前channel的订阅的推特账号的翻译状态为不翻译')
+    .channelFields(['twitterAccounts'])
+    .alias('不翻译订阅', '订阅不翻译')
+    .example('订阅修改不翻译 LinusTech  调整LinusTech的订阅推特的翻译状态为不翻译')
     .action(async ({ session }, account) => {
 
       //判断是否是channel
@@ -316,7 +312,10 @@ export function apply(ctx: Context, config: Config) {
 
 
   // 通过account获得近期推文列表
-  ctx.command('推文列表 <account>').channelFields(['twitterAccounts'])
+  ctx.command('推文列表 <account>', 'nitter-rss: 获取指定account的近期4条推文')
+  .channelFields(['twitterAccounts'])
+    .alias('twitter-list', '推文列表', 'twitter列表', 't-l')
+    .example('推文列表 LinusTech  获取LinusTech的近期4条推文')
     .action(async ({ session }, account) => {
       console.log(`正在处理推文列表: ${account}`);
       let result: RSSItem[]
@@ -340,7 +339,9 @@ export function apply(ctx: Context, config: Config) {
     })
 
   // 通过链接获得推文内容
-  ctx.command('获取推文 <link>', '获取推文内容').alias('twitter', '推文', 'twitter内容', 't')
+  ctx.command('获取推文 <link>', 'nitter-rss: 获取推文内容')
+  .alias('twitter', '推文', 'twitter内容', 't')
+    .example('获取推文 https://twitter.com/LinusTech/status/1716561166288453951  获取链接的推文内容\n获取推文 https://nitter.cz/LinusTech/status/1716561166288453951  获取链接的推文内容')
     .action(async ({ session }, link) => {
       console.log(`正在处理链接: ${link}`);
       const parsedTwitterLink = await parseTwitterLink(link);
@@ -349,7 +350,7 @@ export function apply(ctx: Context, config: Config) {
         return;
       }
       session.send(`正在处理`);
-      return (await parseLinkInfo(ctx,parsedTwitterLink, config, config.translateType != '不翻译'));
+      return (await parseLinkInfo(ctx, parsedTwitterLink, config, config.translateType != '不翻译'));
     });
 }
 
