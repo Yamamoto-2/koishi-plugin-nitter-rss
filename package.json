@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-nitter-rss",
   "description": "订阅 X (Twitter) 内容，使用 https://nitter.cz/，支持ChatGPT与Gradio Chatbot翻译",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "contributors": [
     "Yamamoto <1810972564qq@gmail.com>"
   ],
