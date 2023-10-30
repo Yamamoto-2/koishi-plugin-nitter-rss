@@ -8,13 +8,16 @@ interface Config {
     translateType: string
     screenshot: boolean
     sendImage: boolean
+    sendLink: boolean
     GradioChatBotModule: string
     GradioChatBotPrompt: string
     ChatGPTKey: string
     ChatGPTModule: string
     ChatGPTPrompt: string
     ChatGPTBaseUrl: string
-}
+    timeInterval: number
+    skipRetweet: boolean
+  }
 
 export async function parseLinkInfo(ctx:Context,parsedTwitterLink: LinkInfo, config: Config, translate: boolean): Promise<Array<string | h>> {
     let finalText = '';
@@ -90,7 +93,9 @@ export async function parseLinkInfo(ctx:Context,parsedTwitterLink: LinkInfo, con
             final.push(h.image(content.images[i], 'image/png'));
         }
     }
-    final.push(`https://twitter.com/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
+    if(config.sendLink){
+        final.push(`https://twitter.com/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
+    }
     // 发送消息
     console.log(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     return final;

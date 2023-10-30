@@ -8,6 +8,7 @@ export interface Config {
   translateType: string
   screenshot: boolean
   sendImage: boolean
+  sendLink: boolean
   GradioChatBotModule: string
   GradioChatBotPrompt: string
   ChatGPTKey: string
@@ -24,6 +25,7 @@ export const Config = Schema.intersect([
     translateType: Schema.union(['不翻译',/* '翻译API', */'gradio-chatbot', 'ChatGPT']).default('不翻译').description('翻译类型'),
     screenshot: Schema.boolean().default(true).description('是否在发送消息时发送截图'),
     sendImage: Schema.boolean().default(false).description('是否在发送消息时单独发送推文内所有图片素材'),
+    sendLink: Schema.boolean().default(true).description('是否在发送消息时发送推文链接'),
     timeInterval: Schema.number().role('slider').min(5).max(120).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
     skipRetweet: Schema.boolean().default(true).description('是否跳过转推'),
   }).description('基础配置'),
