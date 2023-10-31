@@ -167,11 +167,12 @@ export function apply(ctx: Context, config: Config) {
   let intervaling = false;
   //循环
   async function interval() {
+    const time = new Date();
+    console.log(`正在循环${formatLocalTime(time.getTime())}`);
     if (intervaling) {
       return;
     }
     intervaling = true;
-    const time = new Date();
     const afterTime = time.getTime() - config.timeInterval * 60 * 1000;
     const channels = await ctx.database.get('channel', {});
     const accounts = getAllAccounts(channels);
