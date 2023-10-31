@@ -9,6 +9,7 @@ interface Config {
     screenshot: boolean
     sendImage: boolean
     sendLink: boolean
+    sendNewTweetAlert: boolean
     GradioChatBotModule: string
     GradioChatBotPrompt: string
     ChatGPTKey: string
@@ -78,7 +79,7 @@ export async function parseLinkInfo(ctx:Context,parsedTwitterLink: LinkInfo, con
                 fs.writeFileSync(`./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.txt`, parsedText as string);
             } catch (e) {
                 console.log(e);
-                finalText += `翻译失败:${e.message}\n原文:\n${content.extractedContent}`;
+                finalText += `\n翻译失败:${e.message}\n原文:\n${content.extractedContent}`;
             }
         }
     }

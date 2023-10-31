@@ -9,6 +9,7 @@ export interface Config {
   screenshot: boolean
   sendImage: boolean
   sendLink: boolean
+  sendNewTweetAlert: boolean
   GradioChatBotModule: string
   GradioChatBotPrompt: string
   ChatGPTKey: string
@@ -26,6 +27,7 @@ export const Config = Schema.intersect([
     screenshot: Schema.boolean().default(true).description('是否在发送消息时发送截图'),
     sendImage: Schema.boolean().default(false).description('是否在发送消息时单独发送推文内所有图片素材'),
     sendLink: Schema.boolean().default(true).description('是否在发送消息时发送推文链接'),
+    sendNewTweetAlert: Schema.boolean().default(false).description('是否在发现新推文时发送消息提醒，以避免转发失败时毫无消息'),
     timeInterval: Schema.number().role('slider').min(5).max(120).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
     skipRetweet: Schema.boolean().default(true).description('是否跳过转推'),
   }).description('基础配置'),
@@ -145,6 +147,9 @@ export function apply(ctx: Context, config: Config) {
       const tempAccount = (await parseTwitterLink(tweet.rss.link)).account;
       for (const channel of channels) {
         if (channel.twitterAccounts && channel.twitterAccounts.some(account => account.account === tempAccount)) {
+          if(config.sendNewTweetAlert){
+            ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
+          }
           console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
           const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
           const messageContent = await parseLinkInfo(ctx, parsedTwitterLink, config, true);
