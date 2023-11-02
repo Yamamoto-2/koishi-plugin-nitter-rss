@@ -18,6 +18,7 @@ export interface Config {
   ChatGPTBaseUrl: string
   timeInterval: number
   skipRetweet: boolean
+  text2image: boolean
 }
 
 // 配置字段
@@ -30,6 +31,7 @@ export const Config = Schema.intersect([
     sendNewTweetAlert: Schema.boolean().default(false).description('是否在发现新推文时发送消息提醒，以避免转发失败时毫无消息'),
     timeInterval: Schema.number().role('slider').min(5).max(120).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
     skipRetweet: Schema.boolean().default(true).description('是否跳过转推'),
+    text2image: Schema.boolean().default(false).description('是否将翻译等文本内容转为图片发送，避免文字过多触发一些平台的风控限制'),
   }).description('基础配置'),
 
   Schema.union([
@@ -147,7 +149,7 @@ export function apply(ctx: Context, config: Config) {
       const tempAccount = (await parseTwitterLink(tweet.rss.link)).account;
       for (const channel of channels) {
         if (channel.twitterAccounts && channel.twitterAccounts.some(account => account.account === tempAccount)) {
-          if(config.sendNewTweetAlert){
+          if (config.sendNewTweetAlert) {
             ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
           }
           console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
@@ -321,7 +323,7 @@ export function apply(ctx: Context, config: Config) {
 
   // 通过account获得近期推文列表
   ctx.command('推文列表 <account>', 'nitter-rss: 获取指定account的近期4条推文')
-  .channelFields(['twitterAccounts'])
+    .channelFields(['twitterAccounts'])
     .alias('twitter-list', '推文列表', 'twitter列表', 't-l')
     .example('推文列表 LinusTech  获取LinusTech的近期4条推文')
     .action(async ({ session }, account) => {
@@ -348,7 +350,7 @@ export function apply(ctx: Context, config: Config) {
 
   // 通过链接获得推文内容
   ctx.command('获取推文 <link>', 'nitter-rss: 获取推文内容')
-  .alias('twitter', '推文', 'twitter内容', 't')
+    .alias('twitter', '推文', 'twitter内容', 't')
     .example('获取推文 https://twitter.com/LinusTech/status/1716561166288453951  获取链接的推文内容\n获取推文 https://nitter.cz/LinusTech/status/1716561166288453951  获取链接的推文内容')
     .action(async ({ session }, link) => {
       console.log(`正在处理链接: ${link}`);

@@ -1,9 +1,11 @@
-import { h ,Context} from 'koishi';
+import { h, Context } from 'koishi';
 import { capturehtml, LinkDetail } from './puppeteer';
 import { LinkInfo } from './utils';
 import { GradioChatBotParse } from './translate/GradioChatBot'
 import { ChatGPTParse } from './translate/ChatGPT'
+import { Text2Image } from './text2image'
 import * as fs from 'fs';
+import * as path from 'path';
 interface Config {
     translateType: string
     screenshot: boolean
@@ -18,15 +20,16 @@ interface Config {
     ChatGPTBaseUrl: string
     timeInterval: number
     skipRetweet: boolean
-  }
+    text2image: boolean
+}
 
-export async function parseLinkInfo(ctx:Context,parsedTwitterLink: LinkInfo, config: Config, translate: boolean): Promise<Array<string | h>> {
+export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, config: Config, translate: boolean): Promise<Array<string | h>> {
     let finalText = '';
     let content: LinkDetail;
 
     // 获取推文内容
     try {
-        content = await capturehtml(ctx,parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
+        content = await capturehtml(ctx, parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
         finalText += content.fullname + '\n' + content.timeText;
     } catch (e) {
         return ([`获取推文内容失败`]);
@@ -86,18 +89,102 @@ export async function parseLinkInfo(ctx:Context,parsedTwitterLink: LinkInfo, con
     else {
         finalText += `\n原文:\n${content.extractedContent}`;
     }
-
-
-    let final = [finalText, h.image(content.screenshot, 'image/png')];
+    let final: Array<string | h> = []
+    if (config.text2image) {
+        const text2imagePath = `./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.png`
+        const ImageOptions = {
+            text: finalText,
+            width: 480,
+            backgroundColor: '#161616',
+            fontSize: 16,
+            font: `Helvetica, Arial, sans-serif`,
+            color: '#ffffff',
+            padding: 15,
+        }
+        // 如果已经有图片
+        let text2imageBuffer: Buffer
+        if (fs.existsSync(text2imagePath)) {
+            text2imageBuffer = fs.readFileSync(text2imagePath)
+        } else {
+            text2imageBuffer = fs.readFileSync(await Text2Image(ctx, ImageOptions, text2imagePath))
+        }
+        const concatImagesBuffer = await concatImages(ctx, [text2imageBuffer, content.screenshot])
+        final = [h.image(concatImagesBuffer, 'image/png')]
+    } else {
+        final = [finalText, h.image(content.screenshot, 'image/png')];
+    }
     if (content.images.length > 0) {
         for (let i = 0; i < content.images.length; i++) {
             final.push(h.image(content.images[i], 'image/png'));
         }
     }
-    if(config.sendLink){
+    if (config.sendLink) {
         final.push(`https://twitter.com/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     }
     // 发送消息
     console.log(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     return final;
 }
+
+const concatImages = async (ctx: Context, imageBuffers: Buffer[]): Promise<Buffer> => {
+    const page = await ctx.puppeteer.page();
+
+    // 创建一个包含所有图片的HTML内容
+    const imagesHtml = imageBuffers.map((buffer, index) => {
+        const base64Image = buffer.toString('base64');
+        return `<img src="data:image/png;base64,${base64Image}" style="width: 100%; margin: 0; padding: 0; border: none; display: block;">`;
+    }).join('');
+
+    // 设置页面的HTML内容
+    await page.setContent(`
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        width: 100vw;
+      }
+    </style>
+    <div style="width: 100%; background: transparent;">
+      ${imagesHtml}
+    </div>
+  `, { waitUntil: 'load' });
+
+    // 等待所有图片加载完成
+    await page.evaluate(() => new Promise<void>((resolve) => {
+        let images = document.querySelectorAll('img');
+        let loaded = images.length;
+        images.forEach((image) => {
+            if (image.complete) {
+                loaded--;
+            } else {
+                image.addEventListener('load', () => {
+                    loaded--;
+                    if (loaded === 0) resolve();
+                });
+            }
+        });
+        if (loaded === 0) resolve();
+    }));
+
+    // 设置一个非常高的高度以确保所有内容被包括
+    await page.setViewport({
+        width: 600, // 假设所有图片都有600px宽
+        height: 10000, // 临时设置一个足够大的值
+        deviceScaleFactor: 1,
+    });
+
+    // 选择包含所有图片的div元素
+    const element = await page.$('div');
+
+    // 对选定的元素进行截图，Puppeteer将自动裁剪
+    const screenshotBuffer = await element.screenshot({
+        omitBackground: true // 确保背景透明
+    });
+
+    return screenshotBuffer;
+};
