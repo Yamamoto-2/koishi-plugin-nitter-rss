@@ -122,19 +122,31 @@ export function apply(ctx: Context, config: Config) {
     });
     return accounts;
   }
+
+  let accountsLastUpdateTimeList = {};
   //获取时间范围内的所有推文:
-  async function getRecentTweets(accounts: twitterAccount[], afterTime: number): Promise<{ rss: RSSItem; translate: boolean }[]> {
+  async function getRecentTweets(accounts: twitterAccount[]): Promise<{ rss: RSSItem; translate: boolean }[]> {
+    const time = new Date();
     const allTweets: Array<{ rss: RSSItem, translate: boolean }> = [];
     for (const account of accounts) {
+      let afterTime: number;
+      if (!accountsLastUpdateTimeList[account.account]) {
+        afterTime = time.getTime() - config.timeInterval * 60 * 1000;
+        accountsLastUpdateTimeList[account.account] = afterTime;
+      }
+      else {
+        afterTime = accountsLastUpdateTimeList[account.account];
+      }
       try {
         const tweets = await getTwitterList(account.account);
         for (const tweet of tweets) {
           const tweetTime = tweet.pubDate
           const isRetweet = config.skipRetweet && (await parseTwitterLink(tweet.link)).account !== account.account;
           const isExist = allTweets.some(item => item.rss.link === tweet.link);
-          if (!isExist && tweetTime >= afterTime && !isRetweet) {
+          if (!isExist && tweetTime > afterTime && !isRetweet) {
             allTweets.push({ rss: tweet, translate: account.translate });
           }
+          accountsLastUpdateTimeList[account.account] = Math.max(tweetTime, accountsLastUpdateTimeList[account.account]);
         }
       } catch (error) {
         console.log(error);
@@ -155,7 +167,7 @@ export function apply(ctx: Context, config: Config) {
           console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
           const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
           const messageContent = await parseLinkInfo(ctx, parsedTwitterLink, config, true);
-          messageContent.unshift(`新推文:\n`);
+          //messageContent.unshift(`新推文:\n`);
           ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
           await new Promise(resolve => {
             console.log(`正在等待10秒`);
@@ -175,10 +187,9 @@ export function apply(ctx: Context, config: Config) {
       return;
     }
     intervaling = true;
-    const afterTime = time.getTime() - config.timeInterval * 60 * 1000;
     const channels = await ctx.database.get('channel', {});
     const accounts = getAllAccounts(channels);
-    const recentTweets = await getRecentTweets(accounts, afterTime);
+    const recentTweets = await getRecentTweets(accounts);
     await sendMessages(recentTweets, channels, ctx, config);
     intervaling = false;
   }
