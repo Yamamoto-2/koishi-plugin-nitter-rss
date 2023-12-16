@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { Context } from 'koishi'
 import { parseString } from 'xml2js';
 import { removeHTMLTags, parseTimestamp } from './utils';
 
@@ -11,10 +11,10 @@ export interface RSSItem {
 }
 
 
-export async function getTwitterList(account: string): Promise<RSSItem[]> {
+export async function getTwitterList(ctx:Context,account: string): Promise<RSSItem[]> {
     const url = `https://nitter.cz/${account}/rss`
     try {
-        const response = await axios.get(url, { responseType: 'text' });
+        const response = await ctx.http.axios(url, { responseType: 'text' });
 
         if (response.status === 200) {
             const xml = response.data;

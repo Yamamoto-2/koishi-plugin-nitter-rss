@@ -72,7 +72,7 @@ export const Config = Schema.intersect([
       ChatGPTModule: Schema.union([
         Schema.const('gpt-3.5-turbo').description('gpt-3.5-turbo'),
         Schema.const('gpt-4').description('gpt-4'),
-      ],).role('radio').description('ChatGPT模型选择，必选，只有付费账号支持gpt4'),
+      ]).role('radio').description('ChatGPT模型选择，必选，只有付费账号支持gpt4'),
       //提示词
       ChatGPTPrompt: Schema.string().description('ChatGPT用提示词，将被放在内容前面').default('请帮我将推文内容翻译成简体中文。所有疑似专有名词，人名，曲名与书名等的内容请保留原文，带有#的关键词请不要翻译。你的回答将被直接输入数据库，请不要提供翻译结果以外的任何内容。以下是需要翻译的内容:\n'),
     }).description('ChatGPT配置'),
@@ -173,7 +173,7 @@ export function apply(ctx: Context, config: Config) {
           ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
           await new Promise(resolve => {
             console.log(`正在等待${config.sendingInterval}秒`);
-            setTimeout(() => resolve(''), config.sendingInterval*1000);
+            setTimeout(() => resolve(''), config.sendingInterval * 1000);
           });
         }
       }
@@ -229,7 +229,7 @@ export function apply(ctx: Context, config: Config) {
       }
       //判断账号是否存在
       try {
-        await getTwitterList(account);
+        await getTwitterList(ctx, account);
       } catch (e) {
         console.log(e);
         session.send(`此账号不存在`);

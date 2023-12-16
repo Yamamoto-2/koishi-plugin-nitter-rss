@@ -31,7 +31,7 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
         let images = [];
         let imageId = 0;
         if (sendImage) {
-            images = await getImageFromHtml($, account, id);
+            images = await getImageFromHtml(ctx, $, account, id);
         }
         return { extractedContent: cleanText(extractedContent), fullname, timestamp, timeText, screenshot: screenshotData, images };
     }
@@ -130,13 +130,13 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
         fs.writeFileSync(`./data/cache/nitter-rss/${account}/status/${id}_content.txt`, extractedContent);//保存内容
         let images = [];
         if (sendImage) {
-            images = await getImageFromHtml($, account, id);
+            images = await getImageFromHtml(ctx, $, account, id);
         }
         return { extractedContent: cleanText(extractedContent), fullname, timestamp, timeText, screenshot: screenshotData, images };
     }
 }
 
-async function getImageFromHtml($: cheerio.CheerioAPI, account: string, id: string) {
+async function getImageFromHtml(ctx, $: cheerio.CheerioAPI, account: string, id: string) {
     //移除多余的内容
     $('.tweet-header').remove();//顶部信息
     $('.tweet-name-row').remove();//转发顶部信息
@@ -159,7 +159,7 @@ async function getImageFromHtml($: cheerio.CheerioAPI, account: string, id: stri
             continue;
         }
         // 下载图片并保存到文件
-        await download(`https://nitter.cz${imageUrl}`, `./data/cache/nitter-rss/${account}/status/`, `${id}_images_${imageId}.png`);
+        await download(ctx, `https://nitter.cz${imageUrl}`, `./data/cache/nitter-rss/${account}/status/`, `${id}_images_${imageId}.png`);
         imageId++;
     }
     const images = [];
