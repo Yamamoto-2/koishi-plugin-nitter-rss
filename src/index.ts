@@ -17,6 +17,7 @@ export interface Config {
   ChatGPTPrompt: string
   ChatGPTBaseUrl: string
   timeInterval: number
+  sendingInterval: number
   skipRetweet: boolean
   text2image: boolean
 }
@@ -30,6 +31,7 @@ export const Config = Schema.intersect([
     sendLink: Schema.boolean().default(true).description('是否在发送消息时发送推文链接'),
     sendNewTweetAlert: Schema.boolean().default(false).description('是否在发现新推文时发送消息提醒，以避免转发失败时毫无消息'),
     timeInterval: Schema.number().role('slider').min(5).max(120).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
+    sendingInterval: Schema.number().role('slider').min(5).max(120).step(1).default(20).description('每次转发推文的时间间隔，单位为秒。如果你使用ChatGPT翻译且ChatGPT API为免费版本，则一分钟只能请求3次API，请设置至少20秒以避免翻译失败'),
     skipRetweet: Schema.boolean().default(true).description('是否跳过转推'),
     text2image: Schema.boolean().default(false).description('是否将翻译等文本内容转为图片发送，避免文字过多触发一些平台的风控限制'),
   }).description('基础配置'),
@@ -170,8 +172,8 @@ export function apply(ctx: Context, config: Config) {
           //messageContent.unshift(`新推文:\n`);
           ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
           await new Promise(resolve => {
-            console.log(`正在等待10秒`);
-            setTimeout(() => resolve(''), 10000);
+            console.log(`正在等待${config.sendingInterval}秒`);
+            setTimeout(() => resolve(''), config.sendingInterval*1000);
           });
         }
       }
