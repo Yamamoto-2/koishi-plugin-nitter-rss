@@ -140,7 +140,7 @@ export function apply(ctx: Context, config: Config) {
         afterTime = accountsLastUpdateTimeList[account.account];
       }
       try {
-        const tweets = await getTwitterList(account.account);
+        const tweets = await getTwitterList(ctx, account.account);
         for (const tweet of tweets) {
           const tweetTime = tweet.pubDate
           const isRetweet = config.skipRetweet && (await parseTwitterLink(tweet.link)).account !== account.account;
