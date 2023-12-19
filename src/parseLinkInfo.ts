@@ -19,6 +19,8 @@ interface Config {
     ChatGPTPrompt: string
     ChatGPTBaseUrl: string
     timeInterval: number
+    sendingInterval: number
+    translateTimeout: number
     skipRetweet: boolean
     text2image: boolean
 }
@@ -58,11 +60,15 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         }
     });
 
-    // 使用Promise.race来设置超时
+    // 定义一个超时标志
+    let isTimeout = false;
+
+    // 设置超时 Promise
     const timeoutPromise = new Promise((resolve, reject) => {
         setTimeout(() => {
+            isTimeout = true; // 设置超时标志
             reject(new Error('翻译超时'));
-        }, 60000); // 60秒超时时间
+        }, config.translateTimeout * 1000); // 超时时间
     });
 
     //如果 content.extractedContent 只有空格和换行符，直接返回
@@ -70,17 +76,14 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         finalText += `\n`;
     }
     else if (translate) {
-        //如果已经有翻译
-        if (fs.existsSync(`./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.txt`)) {
-            finalText += `\n翻译结果:\n${fs.readFileSync(`./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.txt`).toString()}`;
-        }
-        else {
-            // 等待翻译结果或超时
-            try {
-                const parsedText = await Promise.race([translationPromise, timeoutPromise]);
+        try {
+            const parsedText = await Promise.race([translationPromise, timeoutPromise]);
+            if (!isTimeout) { // 检查是否已超时
                 finalText += `\n翻译结果:\n${parsedText}`;
                 fs.writeFileSync(`./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.txt`, parsedText as string);
-            } catch (e) {
+            }
+        } catch (e) {
+            if (!isTimeout) { // 如果不是因为超时导致的错误
                 console.log(e);
                 finalText += `\n翻译失败:${e.message}\n原文:\n${content.extractedContent}`;
             }

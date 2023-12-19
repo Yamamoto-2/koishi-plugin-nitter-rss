@@ -4,7 +4,7 @@ import { parseTwitterLink, formatLocalTime } from './utils'
 import { getTwitterList, RSSItem } from './RSS'
 export const name = 'nitter-rss'
 
-export interface Config {
+interface Config {
   translateType: string
   screenshot: boolean
   sendImage: boolean
@@ -18,6 +18,7 @@ export interface Config {
   ChatGPTBaseUrl: string
   timeInterval: number
   sendingInterval: number
+  translateTimeout: number
   skipRetweet: boolean
   text2image: boolean
 }
@@ -30,8 +31,9 @@ export const Config = Schema.intersect([
     sendImage: Schema.boolean().default(false).description('是否在发送消息时单独发送推文内所有图片素材'),
     sendLink: Schema.boolean().default(true).description('是否在发送消息时发送推文链接'),
     sendNewTweetAlert: Schema.boolean().default(false).description('是否在发现新推文时发送消息提醒，以避免转发失败时毫无消息'),
-    timeInterval: Schema.number().role('slider').min(5).max(120).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
-    sendingInterval: Schema.number().role('slider').min(5).max(120).step(1).default(20).description('每次转发推文的时间间隔，单位为秒。如果你使用ChatGPT翻译且ChatGPT API为免费版本，则一分钟只能请求3次API，请设置至少20秒以避免翻译失败'),
+    timeInterval: Schema.number().role('slider').min(5).max(240).step(1).default(5).description('每次检测新推文时间间隔，单位为分钟'),
+    sendingInterval: Schema.number().role('slider').min(5).max(240).step(1).default(20).description('每次转发推文的时间间隔，单位为秒。如果你使用ChatGPT翻译且ChatGPT API为免费版本，则一分钟只能请求3次API，请设置至少20秒以避免翻译失败'),
+    translateTimeout: Schema.number().role('slider').min(5).max(240).step(1).default(60).description('获取翻译等待的超时时间，单位为秒'),
     skipRetweet: Schema.boolean().default(true).description('是否跳过转推'),
     text2image: Schema.boolean().default(false).description('是否将翻译等文本内容转为图片发送，避免文字过多触发一些平台的风控限制'),
   }).description('基础配置'),
@@ -194,6 +196,7 @@ export function apply(ctx: Context, config: Config) {
     const recentTweets = await getRecentTweets(accounts);
     await sendMessages(recentTweets, channels, ctx, config);
     intervaling = false;
+    console.log(`循环结束`)
   }
   ctx.setInterval(interval, config.timeInterval * 60 * 1000);
   ctx.command('开始循环', 'nitter-rss: 测试用，立刻开始转发轮询').action(async ({ session }) => {
@@ -343,7 +346,7 @@ export function apply(ctx: Context, config: Config) {
       console.log(`正在处理推文列表: ${account}`);
       let result: RSSItem[]
       try {
-        result = await getTwitterList(account);
+        result = await getTwitterList(ctx, account);
       } catch (e) {
         console.log(e);
         session.send(`获取推文列表失败:${e.message}`);
