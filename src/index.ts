@@ -78,7 +78,6 @@ export const Config = Schema.intersect([
       //提示词
       ChatGPTPrompt: Schema.string().description('ChatGPT用提示词，将被放在内容前面').default('请帮我将推文内容翻译成简体中文。所有疑似专有名词，人名，曲名与书名等的内容请保留原文，带有#的关键词请不要翻译。你的回答将被直接输入数据库，请不要提供翻译结果以外的任何内容。以下是需要翻译的内容:\n'),
     }).description('ChatGPT配置'),
-
     Schema.object({}),
   ]),
 ])
@@ -367,8 +366,9 @@ export function apply(ctx: Context, config: Config) {
   // 通过链接获得推文内容
   ctx.command('获取推文 <link>', 'nitter-rss: 获取推文内容')
     .alias('twitter', '推文', 'twitter内容', 't')
-    .example('获取推文 https://twitter.com/LinusTech/status/1716561166288453951  获取链接的推文内容\n获取推文 https://nitter.cz/LinusTech/status/1716561166288453951  获取链接的推文内容')
-    .action(async ({ session }, link) => {
+    .option('forceUpdate', '-f', {fallback:false})
+    .example('获取推文 https://twitter.com/LinusTech/status/1716561166288453951 获取链接的推文内容\ntwitter https://nitter.cz/LinusTech/status/1716561166288453951  获取链接的推文内容\ntwitter https://nitter.cz/LinusTech/status/1716561166288453951 -f  获取链接的推文内容，强制重新翻译')
+    .action(async ({ session,options }, link, forceTranslate) => {
       console.log(`正在处理链接: ${link}`);
       const parsedTwitterLink = await parseTwitterLink(link);
       if (!parsedTwitterLink.isTwitterLink) {
@@ -376,7 +376,7 @@ export function apply(ctx: Context, config: Config) {
         return;
       }
       session.send(`正在处理`);
-      return (await parseLinkInfo(ctx, parsedTwitterLink, config, config.translateType != '不翻译'));
+      return (await parseLinkInfo(ctx, parsedTwitterLink, config, config.translateType != '不翻译', options.forceUpdate));
     });
 }
 

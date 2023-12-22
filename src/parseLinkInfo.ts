@@ -25,7 +25,7 @@ interface Config {
     text2image: boolean
 }
 
-export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, config: Config, translate: boolean): Promise<Array<string | h>> {
+export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, config: Config, translate: boolean, forceTranslate: boolean = false): Promise<Array<string | h>> {
     let finalText = '';
     let content: LinkDetail;
 
@@ -106,7 +106,8 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         }
         // 如果已经有图片
         let text2imageBuffer: Buffer
-        if (fs.existsSync(text2imagePath)) {
+        if (fs.existsSync(text2imagePath) && !forceTranslate) {
+            console.log('使用翻译缓存')
             text2imageBuffer = fs.readFileSync(text2imagePath)
         } else {
             text2imageBuffer = fs.readFileSync(await Text2Image(ctx, ImageOptions, text2imagePath))
