@@ -161,16 +161,21 @@ export function apply(ctx: Context, config: Config) {
   //发送消息
   async function sendMessages(tweets: Array<{ rss: RSSItem, translate: boolean }>, channels: Channel[], ctx: Context, config: Config) {
     for (const tweet of tweets) {
-      const tempAccount = (await parseTwitterLink(tweet.rss.link)).account;
+      //跳过转推
+      if(tweet.rss.isRetweet && config.skipRetweet){
+        continue;
+      }
+      
+      const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
+      const tempAccount = parsedTwitterLink.account;
+      const messageContent = await parseLinkInfo(ctx, parsedTwitterLink, config, tweet.translate);
       for (const channel of channels) {
+        const botId = `${channel.platform}:${channel.assignee}`;
         if (channel.twitterAccounts && channel.twitterAccounts.some(account => account.account === tempAccount)) {
           if (config.sendNewTweetAlert) {
-            ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
+            ctx.bots[botId].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
           }
-          console.log(`正在发送消息: ${tweet.rss.link}至${channel.platform}:${channel.id}`);
-          const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
-          const messageContent = await parseLinkInfo(ctx, parsedTwitterLink, config, true);
-          //messageContent.unshift(`新推文:\n`);
+          console.log(`正在发送消息: ${tweet.rss.link}至${botId}`);
           ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
           await new Promise(resolve => {
             console.log(`正在等待${config.sendingInterval}秒`);
@@ -366,9 +371,9 @@ export function apply(ctx: Context, config: Config) {
   // 通过链接获得推文内容
   ctx.command('获取推文 <link>', 'nitter-rss: 获取推文内容')
     .alias('twitter', '推文', 'twitter内容', 't')
-    .option('forceUpdate', '-f', {fallback:false})
+    .option('forceUpdate', '-f', { fallback: false })
     .example('获取推文 https://twitter.com/LinusTech/status/1716561166288453951 获取链接的推文内容\ntwitter https://nitter.cz/LinusTech/status/1716561166288453951  获取链接的推文内容\ntwitter https://nitter.cz/LinusTech/status/1716561166288453951 -f  获取链接的推文内容，强制重新翻译')
-    .action(async ({ session,options }, link, forceTranslate) => {
+    .action(async ({ session, options }, link, forceTranslate) => {
       console.log(`正在处理链接: ${link}`);
       const parsedTwitterLink = await parseTwitterLink(link);
       if (!parsedTwitterLink.isTwitterLink) {

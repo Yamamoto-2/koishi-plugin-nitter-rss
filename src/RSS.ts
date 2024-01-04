@@ -8,10 +8,11 @@ export interface RSSItem {
     pubDate: number;
     guid: string;
     description: string;
+    isRetweet: boolean;
 }
 
 
-export async function getTwitterList(ctx:Context,account: string): Promise<RSSItem[]> {
+export async function getTwitterList(ctx: Context, account: string): Promise<RSSItem[]> {
     const url = `https://nitter.cz/${account}/rss`
     try {
         const response = await ctx.http.axios(url, { responseType: 'text' });
@@ -32,6 +33,8 @@ export async function getTwitterList(ctx:Context,account: string): Promise<RSSIt
                                 item.pubDate = parseTimestamp(item.pubDate);
                                 item.description = removeHTMLTags(item.description);
                                 item.title = removeHTMLTags(item.title);
+                                //通过title是否为"R to"来判断是否为转推
+                                item.isRetweet = item.title.startsWith('R to'); 
                             });
                             result.rss.channel.item.sort((a: RSSItem, b: RSSItem) => {
                                 return b.pubDate - a.pubDate;
