@@ -144,9 +144,8 @@ export function apply(ctx: Context, config: Config) {
         const tweets = await getTwitterList(ctx, account.account);
         for (const tweet of tweets) {
           const tweetTime = tweet.pubDate
-          const isRetweet = config.skipRetweet && (await parseTwitterLink(tweet.link)).account !== account.account;
           const isExist = allTweets.some(item => item.rss.link === tweet.link);
-          if (!isExist && tweetTime > afterTime && !isRetweet) {
+          if (!isExist && tweetTime > afterTime) {
             allTweets.push({ rss: tweet, translate: account.translate });
           }
           accountsLastUpdateTimeList[account.account] = Math.max(tweetTime, accountsLastUpdateTimeList[account.account]);
@@ -162,10 +161,10 @@ export function apply(ctx: Context, config: Config) {
   async function sendMessages(tweets: Array<{ rss: RSSItem, translate: boolean }>, channels: Channel[], ctx: Context, config: Config) {
     for (const tweet of tweets) {
       //跳过转推
-      if(tweet.rss.isRetweet && config.skipRetweet){
+      if (tweet.rss.isRetweet && config.skipRetweet) {
         continue;
       }
-      
+
       const parsedTwitterLink = await parseTwitterLink(tweet.rss.link);
       const tempAccount = parsedTwitterLink.account;
       const messageContent = await parseLinkInfo(ctx, parsedTwitterLink, config, tweet.translate);
