@@ -101,14 +101,14 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
                 if (err) {
                     return console.error(err);
                 }
-                console.log("screenshot saved.");
+                console.log("webpage screenshot saved.");
             });
         }
 
         //保存网页
         const html = await page.content(); // 获取网页的HTML内容
         fs.writeFileSync(`./data/cache/nitter-rss/${account}/status/${id}_webpage.html`, html);//保存网页
-        console.log("webpage saved.");
+        console.log("webpage html saved.");
 
         // 使用cheerio解析HTML
         const $ = cheerio.load(html);
@@ -138,34 +138,35 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
 
 async function getImageFromHtml(ctx, $: cheerio.CheerioAPI, account: string, id: string) {
     //移除多余的内容
+    /*
     $('.tweet-header').remove();//顶部信息
     $('.tweet-name-row').remove();//转发顶部信息
     $('.tweet-published').remove();//发布时间
     $('.tweet-stats').remove();//转发数等信息
     $('.inner-nav').remove();//导航栏
     $('.replies').remove();//回复
-
+    */
     // 保存网页的所有图片
-    const imageUrls = [];
-    $('img').each((index, element) => {
-        const imageUrl = $(element).attr('src');
-        if (imageUrl) {
-            imageUrls.push(imageUrl);
+    let imageUrls = [];
+    $('.still-image').each((index, element) => {
+        const linkUrl = $(element).attr('href');
+        if (linkUrl) {
+            imageUrls.push(linkUrl);
         }
     });
     let imageId = 0;
+    let images = [];
     for (const imageUrl of imageUrls) {
+        let imageBuffer: Buffer
         if (fs.existsSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`)) {
-            continue;
+            imageBuffer = fs.readFileSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`);
+        }
+        else {
+            imageBuffer = await download(ctx, `https://nitter.cz${imageUrl}`, `./data/cache/nitter-rss/${account}/status/`, `${id}_images_${imageId}.png`)
         }
         // 下载图片并保存到文件
-        await download(ctx, `https://nitter.cz${imageUrl}`, `./data/cache/nitter-rss/${account}/status/`, `${id}_images_${imageId}.png`);
-        imageId++;
-    }
-    const images = [];
-    for (let i = 0; i < imageUrls.length; i++) {
-        const imageBuffer = fs.readFileSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${i}.png`);
         images.push(imageBuffer);
+        imageId++;
     }
     return images;
 }
