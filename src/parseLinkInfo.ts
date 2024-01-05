@@ -34,21 +34,27 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         content = await capturehtml(ctx, parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
         finalText += content.fullname + '\n' + content.timeText;
     } catch (e) {
+        console.log(e)
         return ([`获取推文内容失败`]);
     }
 
     // 翻译
     const translationPromise = new Promise(async (resolve, reject) => {
+        const translateTextPath = `./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.txt`
         try {
-
             let parsedText = '';
-            // gradio-chatbot
-            if (config.translateType === 'gradio-chatbot') {
+            if (fs.existsSync(translateTextPath) && !forceTranslate) {
+                console.log('使用翻译文本缓存');
+                parsedText = fs.readFileSync(translateTextPath, 'utf8'); // 确保正确读取文件内容
+            }
+            else if (config.translateType === 'gradio-chatbot') {
                 parsedText = await GradioChatBotParse(`${config.GradioChatBotPrompt}\n${content.extractedContent}`, config);
+                fs.writeFileSync(translateTextPath, parsedText);
             }
             // ChatGPT
             else if (config.translateType === 'ChatGPT') {
                 parsedText = await ChatGPTParse(`${config.ChatGPTPrompt}\n${content.extractedContent}`, config.ChatGPTKey, config.ChatGPTBaseUrl, config.ChatGPTModule);
+                fs.writeFileSync(translateTextPath, parsedText);
             }
             // 不翻译
             else {
@@ -77,10 +83,9 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
     }
     else if (translate) {
         try {
-            const parsedText = await Promise.race([translationPromise, timeoutPromise]);
-            if (!isTimeout) { // 检查是否已超时
+            const parsedText = await Promise.race([translationPromise, timeoutPromise]) as string;
+            if (!isTimeout) {
                 finalText += `\n翻译结果:\n${parsedText}`;
-                fs.writeFileSync(`./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.txt`, parsedText as string);
             }
         } catch (e) {
             if (!isTimeout) { // 如果不是因为超时导致的错误
@@ -107,7 +112,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         // 如果已经有图片
         let text2imageBuffer: Buffer
         if (fs.existsSync(text2imagePath) && !forceTranslate) {
-            console.log('使用翻译缓存')
+            console.log('使用翻译图片缓存')
             text2imageBuffer = fs.readFileSync(text2imagePath)
         } else {
             text2imageBuffer = fs.readFileSync(await Text2Image(ctx, ImageOptions, text2imagePath))
