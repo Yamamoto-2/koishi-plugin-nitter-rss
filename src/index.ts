@@ -2,6 +2,8 @@ import { Context, Schema, h, Session, Channel } from 'koishi'
 import { parseLinkInfo } from './parseLinkInfo'
 import { parseTwitterLink, formatLocalTime } from './utils'
 import { getTwitterList, RSSItem } from './RSS'
+
+export const inject = ['puppeteer']
 export const name = 'nitter-rss'
 
 interface Config {
