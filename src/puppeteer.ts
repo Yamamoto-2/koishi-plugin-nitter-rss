@@ -138,35 +138,53 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
 
 async function getImageFromHtml(ctx, $: cheerio.CheerioAPI, account: string, id: string) {
     //移除多余的内容
-    /*
-    $('.tweet-header').remove();//顶部信息
-    $('.tweet-name-row').remove();//转发顶部信息
-    $('.tweet-published').remove();//发布时间
-    $('.tweet-stats').remove();//转发数等信息
-    $('.inner-nav').remove();//导航栏
-    $('.replies').remove();//回复
-    */
+
     // 保存网页的所有图片
     let imageUrls = [];
+
+    // 保存所有原图
     $('.still-image').each((index, element) => {
         const linkUrl = $(element).attr('href');
         if (linkUrl) {
             imageUrls.push(linkUrl);
         }
     });
+
+    // 如果没有原图，尝试获取所有图片素材
+    if (imageUrls.length == 0) {
+
+        $('.tweet-header').remove();//顶部信息
+        $('.tweet-name-row').remove();//转发顶部信息
+        $('.tweet-published').remove();//发布时间
+        $('.tweet-stats').remove();//转发数等信息
+        $('.inner-nav').remove();//导航栏
+        $('.replies').remove();//回复
+        $('img').each((index, element) => {
+            const imageUrl = $(element).attr('src');
+            if (imageUrl) {
+                imageUrls.push(imageUrl);
+            }
+        });
+    }
     let imageId = 0;
     let images = [];
+
     for (const imageUrl of imageUrls) {
-        let imageBuffer: Buffer
-        if (fs.existsSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`)) {
-            imageBuffer = fs.readFileSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`);
+        try {
+            let imageBuffer: Buffer
+            if (fs.existsSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`)) {
+                imageBuffer = fs.readFileSync(`./data/cache/nitter-rss/${account}/status/${id}_images_${imageId}.png`);
+            }
+            else {
+                imageBuffer = await download(ctx, `https://nitter.cz${imageUrl}`, `./data/cache/nitter-rss/${account}/status/`, `${id}_images_${imageId}.png`)
+            }
+            // 下载图片并保存到文件
+            images.push(imageBuffer);
+            imageId++;
         }
-        else {
-            imageBuffer = await download(ctx, `https://nitter.cz${imageUrl}`, `./data/cache/nitter-rss/${account}/status/`, `${id}_images_${imageId}.png`)
+        catch (e) {
+            console.log(e)
         }
-        // 下载图片并保存到文件
-        images.push(imageBuffer);
-        imageId++;
     }
     return images;
 }
