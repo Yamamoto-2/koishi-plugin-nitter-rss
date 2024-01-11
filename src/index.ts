@@ -1,4 +1,4 @@
-import { Context, Schema, h, Session, Channel } from 'koishi'
+import { Context, Schema, h, Session, Channel, Logger } from 'koishi'
 import { parseLinkInfo } from './parseLinkInfo'
 import { parseTwitterLink, formatLocalTime } from './utils'
 import { getTwitterList, RSSItem } from './RSS'
@@ -98,6 +98,7 @@ declare module 'koishi' {
 
 // apply主函数
 export function apply(ctx: Context, config: Config) {
+  const logger = new Logger('nitter-rss-apply');
   ctx.model.extend("channel",
     {
       'twitterAccounts': { type: 'json', initial: [] }
@@ -152,7 +153,7 @@ export function apply(ctx: Context, config: Config) {
           accountsLastUpdateTimeList[account.account] = Math.max(tweetTime, accountsLastUpdateTimeList[account.account]);
         }
       } catch (error) {
-        ctx.logger(error);
+        logger.error(error);
       }
     }
     return allTweets.sort((a, b) => new Date(b.rss.pubDate).getTime() - new Date(a.rss.pubDate).getTime());
@@ -176,14 +177,14 @@ export function apply(ctx: Context, config: Config) {
             if (config.sendNewTweetAlert) {
               ctx.bots[botId].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
             }
-            ctx.logger(`正在发送消息: ${tweet.rss.link}至${botId}`);
+            logger.info(`正在发送消息: ${tweet.rss.link}至${botId}`);
             ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
           }
           catch (e) {
-            ctx.logger(`发送消息失败: ${e.message}`);
+            logger.error(`发送消息失败: ${e.message}`);
           }
           await new Promise(resolve => {
-            ctx.logger(`正在等待${config.sendingInterval}秒`);
+            logger.info(`正在等待${config.sendingInterval}秒`);
             setTimeout(() => resolve(''), config.sendingInterval * 1000);
           });
 
@@ -196,7 +197,7 @@ export function apply(ctx: Context, config: Config) {
   //循环
   async function interval() {
     const time = new Date();
-    ctx.logger(`正在循环${formatLocalTime(time.getTime())}`);
+    logger.info(`正在循环${formatLocalTime(time.getTime())}`);
     if (intervaling) {
       return;
     }
@@ -206,7 +207,7 @@ export function apply(ctx: Context, config: Config) {
     const recentTweets = await getRecentTweets(accounts);
     await sendMessages(recentTweets, channels, ctx, config);
     intervaling = false;
-    ctx.logger(`循环结束`)
+    logger.info(`循环结束`)
   }
   ctx.setInterval(interval, config.timeInterval * 60 * 1000);
   ctx.command('开始循环', 'nitter-rss: 测试用，立刻开始转发轮询').action(async ({ session }) => {
@@ -244,7 +245,7 @@ export function apply(ctx: Context, config: Config) {
       try {
         await getTwitterList(ctx, account);
       } catch (e) {
-        ctx.logger(e);
+        logger.error(e);
         session.send(`此账号不存在`);
         return;
       }
@@ -353,12 +354,12 @@ export function apply(ctx: Context, config: Config) {
     .alias('twitter-list', '推文列表', 'twitter列表', 't-l')
     .example('推文列表 LinusTech  获取LinusTech的近期4条推文')
     .action(async ({ session }, account) => {
-      ctx.logger(`正在处理推文列表: ${account}`);
+      logger.info(`正在处理推文列表: ${account}`);
       let result: RSSItem[]
       try {
         result = await getTwitterList(ctx, account);
       } catch (e) {
-        ctx.logger(e);
+        logger.error(e);
         session.send(`获取推文列表失败:${e.message}`);
         return;
       }
@@ -380,7 +381,7 @@ export function apply(ctx: Context, config: Config) {
     .option('forceUpdate', '-f', { fallback: false })
     .example('获取推文 https://twitter.com/LinusTech/status/1716561166288453951 获取链接的推文内容\ntwitter https://nitter.cz/LinusTech/status/1716561166288453951  获取链接的推文内容\ntwitter https://nitter.cz/LinusTech/status/1716561166288453951 -f  获取链接的推文内容，强制重新翻译')
     .action(async ({ session, options }, link, forceTranslate) => {
-      ctx.logger(`正在处理链接: ${link}`);
+      logger.info(`正在处理链接: ${link}`);
       const parsedTwitterLink = await parseTwitterLink(link);
       if (!parsedTwitterLink.isTwitterLink) {
         session.send(`链接格式不正确`);

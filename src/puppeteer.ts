@@ -1,9 +1,11 @@
-import { Context } from 'koishi'
+import { Context, Logger } from 'koishi'
 import { } from 'koishi-plugin-puppeteer'
 import * as fs from 'fs'
 import * as cheerio from 'cheerio'
 import { createDirIfNonExist, download } from './downloader'
 import { parseTimestamp, formatLocalTime, cleanText } from './utils'
+
+const logger = new Logger('nitter-rss-puppeteer')
 
 export interface LinkDetail {
     extractedContent: string;
@@ -56,7 +58,7 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
                 await page.click('form#reqform input[type="submit"]')
             }
             catch (e) {
-                ctx.logger(e)
+                logger.error(e)
             }
         }
 
@@ -101,14 +103,14 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
                 if (err) {
                     return console.error(err);
                 }
-                ctx.logger("webpage screenshot saved.");
+                logger.success("webpage screenshot saved.");
             });
         }
 
         //保存网页
         const html = await page.content(); // 获取网页的HTML内容
         fs.writeFileSync(`./data/cache/nitter-rss/${account}/status/${id}_webpage.html`, html);//保存网页
-        ctx.logger("webpage html saved.");
+        logger.success("webpage html saved.");
 
         // 使用cheerio解析HTML
         const $ = cheerio.load(html);
@@ -183,7 +185,7 @@ async function getImageFromHtml(ctx, $: cheerio.CheerioAPI, account: string, id:
             imageId++;
         }
         catch (e) {
-            ctx.logger(e)
+            logger.error(e)
         }
     }
     return images;

@@ -1,6 +1,8 @@
-import { Context } from 'koishi'
+import { Context, Logger } from 'koishi'
 import { parseString } from 'xml2js';
 import { removeHTMLTags, parseTimestamp } from './utils';
+
+const logger = new Logger('nitter-rss-rss');
 
 export interface RSSItem {
     title: string;
@@ -27,14 +29,14 @@ export async function getTwitterList(ctx: Context, account: string): Promise<RSS
                         reject(error);
                     } else {
                         if (result.rss.channel.item) {
-                            ctx.logger(`RSS解析成功: ${account}`);
+                            logger.success(`RSS解析成功: ${account}`);
                             //把所有item的pubDate转化为时间戳，并且按照时间戳排序
                             result.rss.channel.item.forEach((item) => {
                                 item.pubDate = parseTimestamp(item.pubDate);
                                 item.description = removeHTMLTags(item.description);
                                 item.title = removeHTMLTags(item.title);
                                 //通过title是否为"R to"来判断是否为转推
-                                item.isRetweet = item.title.startsWith('R to'); 
+                                item.isRetweet = item.title.startsWith('R to');
                             });
                             result.rss.channel.item.sort((a: RSSItem, b: RSSItem) => {
                                 return b.pubDate - a.pubDate;

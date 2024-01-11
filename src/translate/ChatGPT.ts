@@ -1,10 +1,12 @@
+import { Logger } from "koishi";
 import OpenAI from "openai";
+const logger = new Logger('nitter-rss-chatgpt');
 
 export async function ChatGPTParse(prompt: string, apiKey: string, baseURL: string, model: string): Promise<string> {
   if (apiKey == '' || apiKey == undefined) {
     throw new Error(`ChatGPT API Key为空`);
   }
-  ctx.logger(`ChatGPT翻译开始`)
+  logger.info(`ChatGPT翻译开始`)
   const openai = new OpenAI({
     baseURL: baseURL,
     apiKey: apiKey,

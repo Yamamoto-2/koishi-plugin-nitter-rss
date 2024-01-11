@@ -1,11 +1,13 @@
-import { h, Context } from 'koishi';
+import { h, Context, Logger } from 'koishi'
 import { capturehtml, LinkDetail } from './puppeteer';
 import { LinkInfo } from './utils';
 import { GradioChatBotParse } from './translate/GradioChatBot'
 import { ChatGPTParse } from './translate/ChatGPT'
 import { Text2Image } from './text2image'
 import * as fs from 'fs';
-import * as path from 'path';
+
+const logger = new Logger('nitter-rss-parseLinkInfo');
+
 interface Config {
     translateType: string
     screenshot: boolean
@@ -34,7 +36,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         content = await capturehtml(ctx, parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
         finalText += content.fullname + '\n' + content.timeText;
     } catch (e) {
-        ctx.logger(e)
+        logger.error(e)
         return ([`获取推文内容失败`]);
     }
 
@@ -44,11 +46,11 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         try {
             let parsedText = '';
             if (fs.existsSync(translateTextPath) && !forceTranslate) {
-                ctx.logger('使用翻译文本缓存');
+                logger.info('使用翻译文本缓存');
                 parsedText = fs.readFileSync(translateTextPath, 'utf8'); // 确保正确读取文件内容
             }
             else if (config.translateType === 'gradio-chatbot') {
-                parsedText = await GradioChatBotParse(ctx, `${config.GradioChatBotPrompt}\n${content.extractedContent}`, config);
+                parsedText = await GradioChatBotParse(`${config.GradioChatBotPrompt}\n${content.extractedContent}`, config);
                 fs.writeFileSync(translateTextPath, parsedText);
             }
             // ChatGPT
@@ -89,7 +91,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
             }
         } catch (e) {
             if (!isTimeout) { // 如果不是因为超时导致的错误
-                ctx.logger(e);
+                logger.error(e);
                 finalText += `\n翻译失败:${e.message}\n原文:\n${content.extractedContent}`;
             }
         }
@@ -112,7 +114,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         // 如果已经有图片
         let text2imageBuffer: Buffer
         if (fs.existsSync(text2imagePath) && !forceTranslate) {
-            ctx.logger('使用翻译图片缓存')
+            logger.info('使用翻译图片缓存')
             text2imageBuffer = fs.readFileSync(text2imagePath)
         } else {
             text2imageBuffer = fs.readFileSync(await Text2Image(ctx, ImageOptions, text2imagePath))
@@ -131,7 +133,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         final.push(`https://twitter.com/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     }
     // 发送消息
-    ctx.logger(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
+    logger.success(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     return final;
 }
 
