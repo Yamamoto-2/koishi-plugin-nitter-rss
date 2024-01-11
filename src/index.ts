@@ -172,15 +172,21 @@ export function apply(ctx: Context, config: Config) {
       for (const channel of channels) {
         const botId = `${channel.platform}:${channel.assignee}`;
         if (channel.twitterAccounts && channel.twitterAccounts.some(account => account.account === tempAccount)) {
-          if (config.sendNewTweetAlert) {
-            ctx.bots[botId].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
+          try {
+            if (config.sendNewTweetAlert) {
+              ctx.bots[botId].sendMessage(channel.id, `发现新推文推文:\n${tempAccount}\n${tweet.rss.link}`);
+            }
+            ctx.logger(`正在发送消息: ${tweet.rss.link}至${botId}`);
+            ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
           }
-          ctx.logger(`正在发送消息: ${tweet.rss.link}至${botId}`);
-          ctx.bots[`${channel.platform}:${channel.assignee}`].sendMessage(channel.id, messageContent);
+          catch (e) {
+            ctx.logger(`发送消息失败: ${e.message}`);
+          }
           await new Promise(resolve => {
             ctx.logger(`正在等待${config.sendingInterval}秒`);
             setTimeout(() => resolve(''), config.sendingInterval * 1000);
           });
+
         }
       }
     }
