@@ -27,7 +27,7 @@ export async function getTwitterList(ctx: Context, account: string): Promise<RSS
                         reject(error);
                     } else {
                         if (result.rss.channel.item) {
-                            console.log(`RSS解析成功: ${account}`);
+                            ctx.logger(`RSS解析成功: ${account}`);
                             //把所有item的pubDate转化为时间戳，并且按照时间戳排序
                             result.rss.channel.item.forEach((item) => {
                                 item.pubDate = parseTimestamp(item.pubDate);

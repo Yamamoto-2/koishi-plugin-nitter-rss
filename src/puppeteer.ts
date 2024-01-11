@@ -56,7 +56,7 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
                 await page.click('form#reqform input[type="submit"]')
             }
             catch (e) {
-                console.log(e)
+                ctx.logger(e)
             }
         }
 
@@ -101,14 +101,14 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
                 if (err) {
                     return console.error(err);
                 }
-                console.log("webpage screenshot saved.");
+                ctx.logger("webpage screenshot saved.");
             });
         }
 
         //保存网页
         const html = await page.content(); // 获取网页的HTML内容
         fs.writeFileSync(`./data/cache/nitter-rss/${account}/status/${id}_webpage.html`, html);//保存网页
-        console.log("webpage html saved.");
+        ctx.logger("webpage html saved.");
 
         // 使用cheerio解析HTML
         const $ = cheerio.load(html);
@@ -183,7 +183,7 @@ async function getImageFromHtml(ctx, $: cheerio.CheerioAPI, account: string, id:
             imageId++;
         }
         catch (e) {
-            console.log(e)
+            ctx.logger(e)
         }
     }
     return images;

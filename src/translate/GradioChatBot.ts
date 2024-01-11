@@ -1,9 +1,10 @@
+import { Context } from 'koishi';
 import { GradioChatBot } from 'gradio-chatbot';
 
-export async function GradioChatBotParse(content: string, config: any) {
-    console.log(`正在使用ID: ${config.GradioChatBotModule} 模型`);
+export async function GradioChatBotParse(ctx: Context, content: string, config: any) {
+    ctx.logger(`正在使用ID: ${config.GradioChatBotModule} 模型`);
     const bot = new GradioChatBot(config.GradioChatBotModule);
-    console.log(`AI翻译开始`);
+    ctx.logger(`AI翻译开始`);
 
     const maxRetry = 3;
     let retry = 0;
@@ -17,7 +18,7 @@ export async function GradioChatBotParse(content: string, config: any) {
             return result;
         } catch (e) {
             retry++;
-            console.log(`AI翻译失败，正在重试(${retry}/${maxRetry})`);
+            ctx.logger(`AI翻译失败，正在重试(${retry}/${maxRetry})`);
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }

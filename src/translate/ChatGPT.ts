@@ -4,7 +4,7 @@ export async function ChatGPTParse(prompt: string, apiKey: string, baseURL: stri
   if (apiKey == '' || apiKey == undefined) {
     throw new Error(`ChatGPT API Key为空`);
   }
-  console.log(`ChatGPT翻译开始`)
+  ctx.logger(`ChatGPT翻译开始`)
   const openai = new OpenAI({
     baseURL: baseURL,
     apiKey: apiKey,

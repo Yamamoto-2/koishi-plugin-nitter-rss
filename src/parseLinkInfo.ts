@@ -34,7 +34,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         content = await capturehtml(ctx, parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
         finalText += content.fullname + '\n' + content.timeText;
     } catch (e) {
-        console.log(e)
+        ctx.logger(e)
         return ([`获取推文内容失败`]);
     }
 
@@ -44,11 +44,11 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         try {
             let parsedText = '';
             if (fs.existsSync(translateTextPath) && !forceTranslate) {
-                console.log('使用翻译文本缓存');
+                ctx.logger('使用翻译文本缓存');
                 parsedText = fs.readFileSync(translateTextPath, 'utf8'); // 确保正确读取文件内容
             }
             else if (config.translateType === 'gradio-chatbot') {
-                parsedText = await GradioChatBotParse(`${config.GradioChatBotPrompt}\n${content.extractedContent}`, config);
+                parsedText = await GradioChatBotParse(ctx, `${config.GradioChatBotPrompt}\n${content.extractedContent}`, config);
                 fs.writeFileSync(translateTextPath, parsedText);
             }
             // ChatGPT
@@ -89,7 +89,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
             }
         } catch (e) {
             if (!isTimeout) { // 如果不是因为超时导致的错误
-                console.log(e);
+                ctx.logger(e);
                 finalText += `\n翻译失败:${e.message}\n原文:\n${content.extractedContent}`;
             }
         }
@@ -112,7 +112,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         // 如果已经有图片
         let text2imageBuffer: Buffer
         if (fs.existsSync(text2imagePath) && !forceTranslate) {
-            console.log('使用翻译图片缓存')
+            ctx.logger('使用翻译图片缓存')
             text2imageBuffer = fs.readFileSync(text2imagePath)
         } else {
             text2imageBuffer = fs.readFileSync(await Text2Image(ctx, ImageOptions, text2imagePath))
@@ -131,7 +131,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         final.push(`https://twitter.com/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     }
     // 发送消息
-    console.log(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
+    ctx.logger(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
     return final;
 }
 
