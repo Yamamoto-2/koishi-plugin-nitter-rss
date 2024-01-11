@@ -3,7 +3,7 @@ import { } from 'koishi-plugin-puppeteer'
 import * as fs from 'fs'
 import * as cheerio from 'cheerio'
 import { createDirIfNonExist, download } from './downloader'
-import { parseTimestamp, formatLocalTime, cleanText } from './utils'
+import { parseTimestamp, formatLocalTime, cleanText, removeHTMLTags } from './utils'
 
 const logger = new Logger('nitter-rss-puppeteer')
 
@@ -128,7 +128,7 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
         $('.replies').remove();//回复
 
         // 提取指定元素的内容
-        const extractedContent = $('body > div > div > div.main-thread').text();
+        const extractedContent = removeHTMLTags($('body > div > div > div.main-thread').toString());
         fs.writeFileSync(`./data/cache/nitter-rss/${account}/status/${id}_content.txt`, extractedContent);//保存内容
         let images = [];
         if (sendImage) {

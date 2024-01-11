@@ -6,6 +6,14 @@ export function removeHTMLTags(inputText: string): string {
   // 使用Cheerio加载HTML文本
   const $ = cheerio.load(inputText);
 
+  // 处理所有链接，将链接文本替换为链接地址
+  $('a').each((index, element) => {
+    const linkUrl = $(element).attr('href');
+    if (linkUrl.startsWith('http')) {
+      $(element).replaceWith(linkUrl);
+    }
+  });
+
   // 获取纯文本内容
   const plainText = $.text();
 
