@@ -38,13 +38,27 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
         return { extractedContent: cleanText(extractedContent), fullname, timestamp, timeText, screenshot: screenshotData, images };
     }
     else {//如果文件不存在，获取网页
-        const url = `https://nitter.cz/${account}/status/${id}`;//网页地址
-
+        // const url = `https://nitter.cz/${account}/status/${id}`;//网页地址
+        // 新改的！！！！！！！
+        const url = `https://nitter.lanterne-rouge.info/${account}/status/${id}`;//网页地址
         const page = await ctx.puppeteer.page();
         if (width) {
             await page.setViewport({ width, height: 4000 });
         }
-        await page.goto(url);
+
+        //await page.goto(url); 重试3次
+        let retry = 0;
+        while (retry < 3) {
+            try {
+                await page.goto(url);
+                break;
+            }
+            catch (e) {
+                logger.error(e);
+                logger.error(`Failed to load page: ${url}, retrying...`);
+                retry++;
+            }
+        }
 
         // 检测是否需要跳过检测
         const isSkip = await page.evaluate(() => {
