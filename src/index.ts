@@ -2,7 +2,7 @@ import { Context, Schema, h, Session, Channel, Logger } from 'koishi'
 import { parseLinkInfo } from './parseLinkInfo'
 import { parseTwitterLink, formatLocalTime } from './utils'
 import { getTwitterList, RSSItem } from './RSS'
-
+import { generatemarkdownfile, getDate } from './hw_daily_column'
 export const inject = ['puppeteer']
 export const name = 'nitter-rss'
 
@@ -194,6 +194,7 @@ export function apply(ctx: Context, config: Config) {
   }
 
   let intervaling = false;
+  let lastExecutionDate = null;
   //循环
   async function interval() {
     const time = new Date();
@@ -207,6 +208,14 @@ export function apply(ctx: Context, config: Config) {
     const recentTweets = await getRecentTweets(accounts);
     await sendMessages(recentTweets, channels, ctx, config);
     intervaling = false;
+    
+    // 生成专栏
+    const currentDate = new Date(time.getFullYear(), time.getMonth(), time.getDate());
+    if (!lastExecutionDate || lastExecutionDate.getTime() !== currentDate.getTime()) {
+      await generatemarkdownfile(getDate(time))
+    }
+    lastExecutionDate = currentDate;
+    
     logger.info(`循环结束`)
   }
   ctx.setInterval(interval, config.timeInterval * 60 * 1000);
