@@ -4,6 +4,8 @@ import { LinkInfo } from './utils';
 import { GradioChatBotParse } from './translate/GradioChatBot'
 import { ChatGPTParse } from './translate/ChatGPT'
 import { Text2Image } from './text2image'
+import { savetodailycolumn } from './hw_daily_column';
+
 import * as fs from 'fs';
 
 const logger = new Logger('nitter-rss-parseLinkInfo');
@@ -100,6 +102,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         finalText += `\n原文:\n${content.extractedContent}`;
     }
     let final: Array<string | h> = []
+    let concatImagesBuffer: Buffer
     if (config.text2image) {
         const text2imagePath = `./data/cache/nitter-rss/${parsedTwitterLink.account}/status/${parsedTwitterLink.id}_translate.png`
         const ImageOptions = {
@@ -119,7 +122,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
         } else {
             text2imageBuffer = fs.readFileSync(await Text2Image(ctx, ImageOptions, text2imagePath))
         }
-        const concatImagesBuffer = await concatImages(ctx, [text2imageBuffer, content.screenshot])
+        concatImagesBuffer = await concatImages(ctx, [text2imageBuffer, content.screenshot])
         final = [h.image(concatImagesBuffer, 'image/png')]
     } else {
         final = [finalText, h.image(content.screenshot, 'image/png')];
@@ -134,6 +137,9 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
     }
     // 发送消息
     logger.success(`处理完成${parsedTwitterLink.account}/status/${parsedTwitterLink.id}`);
+    // hw only!!!!
+    await savetodailycolumn(parsedTwitterLink,concatImagesBuffer)
+    
     return final;
 }
 
@@ -199,3 +205,4 @@ const concatImages = async (ctx: Context, imageBuffers: Buffer[]): Promise<Buffe
 
     return screenshotBuffer;
 };
+
