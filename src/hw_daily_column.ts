@@ -1,9 +1,10 @@
 import {Logger } from 'koishi'
 import { createDirIfNonExist } from './downloader'
+// import * as fs from 'fs';
 const logger = new Logger('nitter-rss-parseLinkInfo');
 import { LinkInfo } from './utils';
-const fs = require('fs').promises;
-
+// const fs = require('fs').promises;
+import * as fs from 'fs'; 
 // for honeywork only
 const hwID: string[] = [
     "HoneyWorks_828",
@@ -59,12 +60,7 @@ export async function generatemarkdownfile(date: string): Promise<void> {
             markdowncontent += `![](${value})\n`
         }
     }
-    fs.writeFile(`./data/hw-daily-column/${date}/${date}.md`, markdowncontent, function (err) {
-        if (err) {
-            logger.success("markdowncontent  error.");
-        }
-        logger.success("markdowncontent saved.");
-    });
+    fs.writeFileSync(`./data/hw-daily-column/${date}/${date}.md`, markdowncontent);
 }
 // helper
 export function getDate(currentDate: Date):string{
@@ -73,25 +69,29 @@ export function getDate(currentDate: Date):string{
     return `${month < 10 ? '0' + month : month}-${date < 10 ? '0' + date : date}`;
 }
 
-
 async function getdatefilesmap(date:string): Promise<Map<string, string[]>> {
     const dailyPath = `./data/hw-daily-column/${date}`;
     const folderMap = new Map<string, string[]>();
+
     try {
-        const files = await fs.readdir(dailyPath, { withFileTypes: true });
+        const files = await fs.promises.readdir(dailyPath, { withFileTypes: true });
+
         for (const file of files) {
             if (file.isDirectory()) {
                 const imagePath = `./data/hw-daily-column/${date}/${file.name}`;
-                const imageFiles = await fs.readdir(imagePath, { withFileTypes: true });
+                const imageFiles = await fs.promises.readdir(imagePath, { withFileTypes: true });
+
                 const imagePaths = imageFiles
-                .filter(f => !f.isDirectory()) 
-                .map(f => `/${file.name}/${f.name}`); 
+                    .filter(f => !f.isDirectory()) 
+                    .map(f => `./${file.name}/${f.name}`);
+
                 folderMap.set(file.name, imagePaths);
             }
         }
     } catch (e) {
-        logger.success('hw 读取文件夹时发生错误:');
+        logger.success('hw 读取文件夹时发生错误:', e);
     }
+    
     return folderMap;
 }
 
