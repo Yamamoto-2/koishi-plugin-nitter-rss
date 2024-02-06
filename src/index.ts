@@ -194,7 +194,7 @@ export function apply(ctx: Context, config: Config) {
   }
 
   let intervaling = false;
-  let lastExecutionDate = null;
+  let lastExecutionDate = new Date();
   //循环
   async function interval() {
     const time = new Date();
@@ -208,14 +208,12 @@ export function apply(ctx: Context, config: Config) {
     const recentTweets = await getRecentTweets(accounts);
     await sendMessages(recentTweets, channels, ctx, config);
     intervaling = false;
-    
     // 生成专栏
-    const currentDate = new Date(time.getFullYear(), time.getMonth(), time.getDate());
-    if (!lastExecutionDate || lastExecutionDate.getTime() !== currentDate.getTime()) {
-      await generatemarkdownfile(getDate(time))
+    if (getDate(time) !== getDate(lastExecutionDate)) {
+      await generatemarkdownfile(getDate(lastExecutionDate))
+      logger.info(`生成专栏`)
     }
-    lastExecutionDate = currentDate;
-    
+    lastExecutionDate = time;
     logger.info(`循环结束`)
   }
   ctx.setInterval(interval, config.timeInterval * 60 * 1000);
