@@ -2,7 +2,7 @@ import { Context, Schema, h, Session, Channel, Logger } from 'koishi'
 import { parseLinkInfo } from './parseLinkInfo'
 import { parseTwitterLink, formatLocalTime } from './utils'
 import { getTwitterList, RSSItem } from './RSS'
-import { generatemarkdownfile, getDate } from './hw_daily_column'
+import { generateheader, getDate, getHeader } from './hw_daily_column'
 export const inject = ['puppeteer']
 export const name = 'nitter-rss'
 
@@ -210,7 +210,7 @@ export function apply(ctx: Context, config: Config) {
     intervaling = false;
     // 生成专栏
     if (getDate(time) !== getDate(lastExecutionDate)) {
-      await generatemarkdownfile(getDate(lastExecutionDate))
+      await generateheader(ctx, getDate(lastExecutionDate))
       logger.info(`生成专栏`)
     }
     lastExecutionDate = time;
@@ -224,7 +224,10 @@ export function apply(ctx: Context, config: Config) {
     else {
       session.send(`正在循环中`);
     }
-    await interval();
+    // await interval();
+    // const time = new Date();
+    // await getHeader(ctx, "Kotoha_ktnh", getDate(time))
+    // await generatemarkdownfile(ctx,"2024-02-13")
     session.send(`循环结束`);
   }
   )
