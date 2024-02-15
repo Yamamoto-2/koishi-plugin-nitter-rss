@@ -14,8 +14,8 @@ export interface RSSItem {
 }
 
 
-export async function getTwitterList(ctx: Context, account: string): Promise<RSSItem[]> {
-    const url = `https://nitter.cz/${account}/rss`
+export async function getTwitterList(nitterUrl: string, ctx: Context, account: string): Promise<RSSItem[]> {
+    const url = `https://${nitterUrl}/${account}/rss`
     try {
         const response = await ctx.http.axios(url, { responseType: 'text' });
 

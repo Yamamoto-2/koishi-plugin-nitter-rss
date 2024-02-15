@@ -70,7 +70,7 @@ export interface LinkInfo {
 //解析Twitter链接
 export async function parseTwitterLink(link: string): Promise<LinkInfo> {
   try {
-    const isTwitterLink = link.includes('twitter.com') || link.includes('nitter.cz') || link.includes('x.com');;
+    const isTwitterLink = link.includes('twitter.com') || link.includes('nitter') || link.includes('x.com');;
     let account: string | null = null;
     let id: string | null = null;
 

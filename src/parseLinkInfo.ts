@@ -9,6 +9,7 @@ import * as fs from 'fs';
 const logger = new Logger('nitter-rss-parseLinkInfo');
 
 interface Config {
+    nitterUrl: string
     translateType: string
     screenshot: boolean
     sendImage: boolean
@@ -33,7 +34,7 @@ export async function parseLinkInfo(ctx: Context, parsedTwitterLink: LinkInfo, c
 
     // 获取推文内容
     try {
-        content = await capturehtml(ctx, parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
+        content = await capturehtml(config.nitterUrl, ctx, parsedTwitterLink.account, parsedTwitterLink.id, config.screenshot, config.sendImage, 480);
         finalText += content.fullname + '\n' + content.timeText;
     } catch (e) {
         logger.error(e)

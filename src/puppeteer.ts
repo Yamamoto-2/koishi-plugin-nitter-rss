@@ -16,7 +16,7 @@ export interface LinkDetail {
     images: Buffer[];
 }
 
-export async function capturehtml(ctx: Context, account: string, id: string, getScreenshot: boolean, sendImage: boolean, width: number): Promise<LinkDetail> {
+export async function capturehtml(nitterUrl: string, ctx: Context, account: string, id: string, getScreenshot: boolean, sendImage: boolean, width: number): Promise<LinkDetail> {
     //创建目录
     createDirIfNonExist(`./data/cache/nitter-rss/${account}/status/`);
     //如果文件已经存在，使用缓存
@@ -38,9 +38,7 @@ export async function capturehtml(ctx: Context, account: string, id: string, get
         return { extractedContent: cleanText(extractedContent), fullname, timestamp, timeText, screenshot: screenshotData, images };
     }
     else {//如果文件不存在，获取网页
-        // const url = `https://nitter.cz/${account}/status/${id}`;//网页地址
-        // 新改的！！！！！！！
-        const url = `https://nitter.lanterne-rouge.info/${account}/status/${id}`;//网页地址
+        const url = `https://${nitterUrl}/${account}/status/${id}`;//网页地址
         const page = await ctx.puppeteer.page();
         if (width) {
             await page.setViewport({ width, height: 4000 });

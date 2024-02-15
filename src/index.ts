@@ -7,6 +7,7 @@ export const inject = ['puppeteer']
 export const name = 'nitter-rss'
 
 interface Config {
+  nitterUrl: string
   translateType: string
   screenshot: boolean
   sendImage: boolean
@@ -28,6 +29,7 @@ interface Config {
 // 配置字段
 export const Config = Schema.intersect([
   Schema.object({
+    nitterUrl: Schema.string().description('nitter服务器地址，必填，可以在这个列表中选择 https://status.d420.de \n 注意需要对应网站支持RSS功能，填写错误会导致插件崩溃').default('nitter.esmailelbob.xyz'),
     translateType: Schema.union(['不翻译',/* '翻译API', */'gradio-chatbot', 'ChatGPT']).default('不翻译').description('翻译类型'),
     screenshot: Schema.boolean().default(true).description('是否在发送消息时发送截图'),
     sendImage: Schema.boolean().default(false).description('是否在发送消息时单独发送推文内所有图片素材'),
@@ -143,7 +145,7 @@ export function apply(ctx: Context, config: Config) {
         afterTime = accountsLastUpdateTimeList[account.account];
       }
       try {
-        const tweets = await getTwitterList(ctx, account.account);
+        const tweets = await getTwitterList(config.nitterUrl, ctx, account.account);
         for (const tweet of tweets) {
           const tweetTime = tweet.pubDate
           const isExist = allTweets.some(item => item.rss.link === tweet.link);
@@ -243,7 +245,7 @@ export function apply(ctx: Context, config: Config) {
       }
       //判断账号是否存在
       try {
-        await getTwitterList(ctx, account);
+        await getTwitterList(config.nitterUrl, ctx, account);
       } catch (e) {
         logger.error(e);
         session.send(`此账号不存在`);
@@ -357,7 +359,7 @@ export function apply(ctx: Context, config: Config) {
       logger.info(`正在处理推文列表: ${account}`);
       let result: RSSItem[]
       try {
-        result = await getTwitterList(ctx, account);
+        result = await getTwitterList(config.nitterUrl, ctx, account);
       } catch (e) {
         logger.error(e);
         session.send(`获取推文列表失败:${e.message}`);
