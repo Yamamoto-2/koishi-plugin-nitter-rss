@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-nitter-rss",
-  "description": "订阅 X (Twitter) 内容，使用 https://nitter.cz/，支持ChatGPT与Gradio Chatbot翻译",
+  "description": "订阅 X (Twitter) 内容，使用 nitter.cz，支持ChatGPT与Gradio Chatbot翻译",
   "version": "1.0.2",
   "contributors": [
     "Yamamoto <1810972564qq@gmail.com>"
@@ -32,8 +32,8 @@
   },
   "koishi": {
     "description": {
-      "zh": "订阅 X (Twitter) 内容，使用 https://nitter.cz/，支持ChatGPT与Gradio Chatbot翻译",
-      "en": "Subscribe to X (Twitter) content using https://nitter.cz/ with ChatGPT & Gradio Chatbot translation support!"
+      "zh": "订阅 X (Twitter) 内容，使用 nitter.cz，支持ChatGPT与Gradio Chatbot翻译",
+      "en": "Subscribe to X (Twitter) content using nitter.cz with ChatGPT & Gradio Chatbot translation support!"
     },
     "service": {
       "required": [
